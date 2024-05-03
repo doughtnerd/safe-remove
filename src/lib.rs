@@ -1,11 +1,82 @@
 #![allow(dead_code, unused_variables)]
 use base64::prelude::*;
+use cache::{DiskCache, Cache};
+use glob::glob;
 use std::{
     env, fs,
     path::{Path, PathBuf},
 };
 
 pub mod cache;
+pub mod cli;
+
+pub fn remove_files(files: &Vec<PathBuf>) {
+    for file in files {
+        fs::remove_file(file).unwrap_or_default();
+    }
+}
+
+pub fn find_matching_files(filename_patterns: Vec<String>, include_dirs: bool) -> Vec<PathBuf> {
+    filename_patterns
+        .into_iter()
+        .filter(|file| {
+            if file == ".." || file == "." {
+                return false;
+            }
+            return true;
+        })
+        .flat_map(|file| {
+            glob(file.as_str()).unwrap()
+        })
+        .flatten()
+        .filter(|file| {
+            if file.is_dir() {
+                return include_dirs;
+            }
+            return true;
+        })
+        .map(|file| file.canonicalize().unwrap())
+        .collect()
+}
+
+pub fn cache_files(files: &Vec<PathBuf>) {
+    let cache_dir = get_cache_dir();
+    if let Err(e) = cache_dir {
+        println!("Failed to get cache dir\r\n{}", e);
+        return;
+    }
+
+    let cache = DiskCache::new(cache_dir.unwrap());
+    let mut cache = match cache {
+        Ok(cache) => cache,
+        Err(e) => {
+            println!("Failed to create cache {}", e);
+            return;
+        }
+    };
+
+    for file in files {
+        let data = copy_file_to_buffer(&file);
+        let data = match data {
+            Ok(data) => data,
+            Err(e) => {
+                println!("Failed to copy file data:\r\n{}", e);
+                return;
+            }
+        };
+
+        let encoded_path = encode_file_path(&file);
+        if let Err(e) = encoded_path {
+            println!("Failed to encode file path\r\n{}", e);
+            return;
+        }
+        let encoded_path = encoded_path.unwrap();
+        
+        cache.store(&encoded_path, data);
+
+        println!("File {} has been safely removed", file.display());
+    }
+}
 
 pub fn encode_file_path(file: &Path) -> Result<String, &'static str> {
     let file = file.canonicalize();
@@ -70,36 +141,6 @@ pub enum OS {
     MacOS,
     Linux,
     Other,
-}
-
-pub type CmdOptions = Vec<String>;
-
-struct CmdOptionsS {
-    force: bool,
-    verbose: bool,
-    dry_run: bool,
-    remove: bool,
-    restore: bool,
-    list: bool,
-    directory: bool,
-    recursive: bool,
-}
-
-pub fn get_options() -> Option<CmdOptions> {
-    let args = std::env::args();
-    let args = args
-        .skip(1)
-        .rev()
-        .skip(1)
-        .collect::<Vec<String>>()
-        .join("")
-        .replace("-", "");
-
-    if args.len() == 1 {
-        return None;
-    }
-
-    None
 }
 
 pub fn get_variable_data_path() -> Result<String, String> {
