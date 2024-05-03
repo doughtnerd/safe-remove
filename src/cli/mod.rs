@@ -3,6 +3,7 @@ use clap::{arg, ArgAction, Command};
 #[derive(Debug)]
 pub enum CliArgs {
     RemoveArgs {
+        cache: bool,
         recursive: bool,
         directory: bool,
         dry: bool,
@@ -25,6 +26,7 @@ pub fn parse_main_cli_args() -> Result<CliArgs, &'static str> {
                 .about("Remove files with the option to restore them")
                 .args([
                     arg!(dry: -D --dry "Show the files to be removed without actually removing them"),
+                    arg!(cache: -c --cache "Whether or not the files should be cached").default_value("true"),
                     arg!(recursive: -r --recursive "Recursively remove files").action(ArgAction::SetTrue),
                     arg!(directory: -d --directory "Remove directories").action(ArgAction::SetTrue),
                     arg!(file: ... "The file(s) or glob pattern(s) to remove or restore").required(true),
@@ -42,6 +44,7 @@ pub fn parse_main_cli_args() -> Result<CliArgs, &'static str> {
         Some(("remove", args)) => {
             Ok(
                 CliArgs::RemoveArgs {
+                    cache: args.get_flag("cache"),
                     directory: args.get_flag("directory"),
                     dry: args.get_flag("dry"),
                     recursive: args.get_flag("recursive"),

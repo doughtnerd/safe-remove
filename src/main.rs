@@ -12,7 +12,7 @@ fn main() {
     };
 
     match args {
-        CliArgs::RemoveArgs { recursive, directory, dry, files } => {
+        CliArgs::RemoveArgs { cache, recursive, directory, dry, files } => {
             let files = find_matching_files(files, directory);
             
             if dry {
@@ -20,7 +20,10 @@ fn main() {
                 return;
             }
 
-            cache_files(&files);
+            if cache {
+                cache_files(&files);
+            }
+
             remove_files(&files);
         },
         CliArgs::RestoreArgs { dry, inputs } => {}
