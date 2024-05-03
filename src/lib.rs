@@ -42,7 +42,7 @@ pub fn find_matching_files(filename_patterns: Vec<String>, include_dirs: bool) -
 pub fn cache_files(files: &Vec<PathBuf>) {
     let cache_dir = get_cache_dir();
     if let Err(e) = cache_dir {
-        println!("Failed to get cache dir\r\n{}", e);
+        eprintln!("Failed to get cache dir\r\n{}", e);
         return;
     }
 
@@ -50,7 +50,7 @@ pub fn cache_files(files: &Vec<PathBuf>) {
     let mut cache = match cache {
         Ok(cache) => cache,
         Err(e) => {
-            println!("Failed to create cache {}", e);
+            eprintln!("Failed to create cache {}", e);
             return;
         }
     };
@@ -60,14 +60,14 @@ pub fn cache_files(files: &Vec<PathBuf>) {
         let data = match data {
             Ok(data) => data,
             Err(e) => {
-                println!("Failed to copy file data:\r\n{}", e);
+                eprintln!("Failed to copy file data:\r\n{}", e);
                 return;
             }
         };
 
         let encoded_path = encode_file_path(&file);
         if let Err(e) = encoded_path {
-            println!("Failed to encode file path\r\n{}", e);
+            eprintln!("Failed to encode file path\r\n{}", e);
             return;
         }
         let encoded_path = encoded_path.unwrap();
