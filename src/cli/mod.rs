@@ -11,7 +11,7 @@ pub enum CliArgs {
     },
     RestoreArgs {
         dry: bool,
-        inputs: Vec<String>
+        files: Vec<String>
     }
 }
 
@@ -60,10 +60,10 @@ pub fn parse_main_cli_args() -> Result<CliArgs, &'static str> {
             Ok(
                 CliArgs::RestoreArgs {
                     dry: args.get_flag("dry"),
-                    inputs: args
-                        .get_many::<String>("inputs")
+                    files: args
+                        .get_many::<String>("file")
                         .unwrap()
-                        .map(|input|  input.to_string())
+                        .map(|file|  file.to_string())
                         .collect()
                 }
             )

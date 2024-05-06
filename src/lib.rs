@@ -78,18 +78,63 @@ pub fn cache_files(files: &Vec<PathBuf>) {
     }
 }
 
-pub fn encode_file_path(file: &Path) -> Result<String, &'static str> {
-    let file = file.canonicalize();
-
-    if let Err(_) = file {
-        return Err("Failed to encode file path to cacheable key");
+pub fn restore_files(files: &Vec<String>) {
+    let cache_dir = get_cache_dir();
+    if let Err(e) = cache_dir {
+        eprintln!("Failed to get cache dir\r\n{}", e);
+        return;
     }
-    let file = file.unwrap();
+    let cache_dir = cache_dir.unwrap();
+
+    let cache = DiskCache::new(cache_dir.clone());
+    let mut cache = match cache {
+        Ok(cache) => cache,
+        Err(e) => {
+            eprintln!("Failed to create cache {}", e);
+            return;
+        }
+    };
+
+    for file in files {
+        println!("{:?}", file);
+        if let Some(bytes) = cache.load(file) {
+            let file_path = decode_hash(file);
+            println!("Restoring: {:?}", file_path);
+            fs::write(file_path, bytes).expect("msg");
+        }
+    }
+}
+
+pub fn decode_hash(hash: &String) -> PathBuf {
+    let decoded_path = BASE64_STANDARD.decode(hash);
+    if let Err(msg) = decoded_path {
+        panic!();
+    }
+    let decoded_path = decoded_path.unwrap();
+
+    let decoded_path = String::from_utf8(decoded_path);
+    if let Err(msg) = decoded_path {
+        panic!();
+    }
+    let decoded_path = decoded_path.unwrap();
+
+    PathBuf::from(decoded_path)
+}
+
+pub fn encode_file_path(file: &PathBuf) -> Result<String, String> {
+    let file = file.canonicalize().unwrap_or(file.to_owned());
+
+    // if let Err(msg) = file {
+    //     return Err(format!("Failed to encode file path to cacheable key, {:?}", msg));
+    // }
+    // let file = file.unwrap();
 
     let file = BASE64_STANDARD.encode(file.to_str().unwrap());
 
     Ok(file)
 }
+
+
 
 pub fn get_cache_dir() -> Result<PathBuf, String> {
     let current_dir = env::current_dir();
